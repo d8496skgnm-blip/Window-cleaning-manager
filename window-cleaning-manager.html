@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Window Cleaning Manager</title>
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--pri:#2B7FE0;--sec:#3C82DC;--bg:#F4F8FC;--card:#fff;--tx:#1E2A38;--mut:#6B7A8D;--ln:#D3E3F6;--ok:#1E9E6A;--okb:#E3F6EE;--bad:#D6453D;--badb:#FDECEA;--up:#E8F1FD;--warn:#B7791F;--warnb:#FFF4DB;color-scheme:light}
+.bub{position:fixed;bottom:-120px;border-radius:50%;pointer-events:none;z-index:0;background:radial-gradient(circle at 30% 28%,rgba(255,255,255,.95),rgba(150,198,248,.28) 55%,rgba(43,127,224,.2));border:1px solid rgba(43,127,224,.28);animation:rise linear infinite}
+@keyframes rise{to{transform:translate(var(--dx,30px),-130vh)}}
+@media (prefers-reduced-motion:reduce){.bub{animation:none;bottom:auto;top:var(--t,40%)}}
+#app{position:relative;z-index:1}
+*{box-sizing:border-box}html,body{margin:0;background:#EEF5FD linear-gradient(180deg,#fff 0,#DDEBFC 100%) fixed;color:var(--tx);font:15px/1.4 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+#app{max-width:520px;margin:0 auto;padding:0 14px 96px}
+h1{font-size:22px;margin:18px 0 2px}h2{font-size:16px;margin:16px 0 8px}.sub{color:var(--mut);font-size:13px}
+.card{background:var(--card);border:1px solid var(--ln);border-radius:14px;padding:12px;margin:8px 0}
+.row{display:flex;align-items:center;gap:10px}.sp{flex:1;min-width:0}.b{font-weight:600}.sm{font-size:12.5px;color:var(--mut)}
+.badge{font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:99px;white-space:nowrap;background:var(--up);color:var(--pri)}
+.badge.over{background:var(--badb);color:var(--bad)}.badge.today{background:var(--warnb);color:var(--warn)}.badge.paid{background:var(--okb);color:var(--ok)}.badge.unpaid{background:var(--badb);color:var(--bad)}
+input,select{width:100%;padding:10px 11px;border:1px solid var(--ln);border-radius:10px;background:var(--card);color:var(--tx);font:inherit}
+label{display:block;font-size:12.5px;color:var(--mut);margin:10px 0 4px}
+button{font:inherit;border:0;border-radius:10px;padding:10px 14px;background:var(--pri);color:#fff;font-weight:600;cursor:pointer}
+button.g{background:var(--up);color:var(--pri)}button.d{background:var(--badb);color:var(--bad)}button.s{padding:6px 10px;font-size:13px}
+.chips{display:flex;gap:6px;margin:8px 0;overflow-x:auto}.chip{padding:6px 12px;border-radius:99px;background:var(--card);border:1px solid var(--ln);color:var(--mut);white-space:nowrap;font-size:13px;font-weight:600}.chip.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--ln);display:flex;justify-content:center;padding:6px 0 calc(6px + env(safe-area-inset-bottom,0px));z-index:5}
+nav div{display:flex;max-width:520px;width:100%}nav button{flex:1;background:none;color:var(--mut);border-radius:0;font-size:12px;padding:6px}nav button.on{color:var(--pri)}nav svg{display:block;margin:0 auto 2px}
+.fab{position:fixed;right:18px;bottom:calc(76px + env(safe-area-inset-bottom,0px));width:54px;height:54px;border-radius:50%;font-size:28px;padding:0;box-shadow:0 6px 18px rgba(43,127,224,.4);z-index:6}
+.ov{position:fixed;inset:0;background:rgba(10,20,35,.5);z-index:20;display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--bg);width:100%;max-width:520px;max-height:92%;overflow:auto;border-radius:18px 18px 0 0;padding:16px 14px calc(20px + env(safe-area-inset-bottom,0px))}
+.thumb{width:44px;height:44px;border-radius:10px;background:var(--up);object-fit:cover;flex:none;display:flex;align-items:center;justify-content:center;color:var(--pri);font-weight:700}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:3px;text-align:center}.cal .h{font-size:11px;color:var(--mut)}
+.day{padding:7px 0;border-radius:9px;background:var(--card);border:1px solid var(--ln);font-size:13px;min-height:44px}.day.o{opacity:.35}.day.sel{border-color:var(--pri);background:var(--up)}.day.t{font-weight:700;color:var(--pri)}
+.dots{display:flex;gap:2px;justify-content:center;margin-top:3px}.dot{width:5px;height:5px;border-radius:50%;background:var(--pri)}.dot.r{background:var(--bad)}.dot.k{background:var(--ok)}
+.stat{flex:1;text-align:center}.stat .n{font-size:20px;font-weight:700}.wrap{overflow-x:auto}
+svg text{font-family:inherit}
+a.lnk{display:inline-block;padding:8px 13px;border-radius:10px;background:var(--up);color:var(--pri);font-weight:600;font-size:13px;text-decoration:none;margin-top:8px}
+</style></head><body><div id="app"></div><div id="ovl"></div>
+<script>
+const $=s=>document.querySelector(s),p2=n=>String(n).padStart(2,'0');
+const iso=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
+const parse=s=>{const[a,b,c]=s.split('-');return new Date(+a,b-1,+c)};
+const today=()=>iso(new Date());
+const diff=(a,b)=>Math.round((parse(a)-parse(b))/864e5);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money=n=>'£'+(+n||0).toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:2});
+const uid=()=>Math.random().toString(36).slice(2,9);
+const mapUrl=a=>'https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(a||'');
+const embed=a=>a?`<iframe title="Map" src="https://maps.google.com/maps?q=${encodeURIComponent(a)}&z=15&output=embed" loading="lazy" referrerpolicy="no-referrer" style="width:100%;height:210px;border:0;border-radius:12px;margin-top:8px;background:var(--up)"></iframe>`:'';
+const dirUrl=l=>'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination='+encodeURIComponent(l[l.length-1])+(l.length>1?'&waypoints='+encodeURIComponent(l.slice(0,-1).join('|')):'');
+const fmtD=s=>parse(s).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+function addInt(s,c){const d=parse(s);if(c.freq==='weekly')d.setDate(d.getDate()+7);else if(c.freq==='monthly')d.setMonth(d.getMonth()+1);else d.setDate(d.getDate()+Math.max(1,+c.interval||14));return iso(d)}
+const ADD=(dy)=>{const d=new Date();d.setDate(d.getDate()+dy);return iso(d)};
+function seed(){
+ const mk=(n,a,ph,la,ln,fr,bp,ad,due)=>({id:uid(),name:n,address:a,phone:ph,lat:la,lng:ln,photo:'',freq:fr,interval:14,base:bp,addons:ad,nextDue:due});
+ const c=[mk('Harbor Dental','12 Pier St','555-0111',47.606,-122.335,'monthly',120,[{n:'Gutters',p:45,on:0},{n:'Doors',p:20,on:1}],ADD(-3)),
+ mk('The Hendersons','48 Maple Ave','555-0142',47.615,-122.322,'monthly',85,[{n:'Gutters',p:40,on:1},{n:'Roof',p:90,on:0}],ADD(0)),
+ mk('Corner Bakery','3 Main St','555-0177',47.598,-122.349,'weekly',60,[{n:'Doors',p:15,on:1}],ADD(1)),
+ mk('Lake View Condos','900 Shore Dr','555-0190',47.623,-122.341,'custom',210,[{n:'Gutters',p:60,on:0}],ADD(4))];
+ const jobs=c.map(x=>({id:uid(),cid:x.id,date:x.nextDue,status:'Pending',done:'',amount:0,paid:false}));
+ jobs.push({id:uid(),cid:c[1].id,date:ADD(-30),status:'Completed',done:ADD(-30),amount:125,paid:true},{id:uid(),cid:c[0].id,date:ADD(-33),status:'Completed',done:ADD(-33),amount:140,paid:false});
+ return{c,jobs}}
+let D;try{D=JSON.parse(localStorage.getItem('wcm2'))}catch(e){}if(!D||!D.c)D={c:[],jobs:[]};
+let DB=null,UID=null,last={},SYNC='This device only',tm=null,seen=0,dirty=0,pushing=0,lastLocal=0,sigs={};
+const st=o=>o&&typeof o==='object'?Array.isArray(o)?'['+o.map(st).join(',')+']':'{'+Object.keys(o).sort().filter(k=>o[k]!==undefined).map(k=>JSON.stringify(k)+':'+st(o[k])).join(',')+'}':JSON.stringify(o);
+const flat=()=>{const m={};D.c.forEach(c=>m['c_'+c.id]=st(c));D.jobs.forEach(j=>m['j_'+j.id]=st(j));return m};
+const sig=o=>{const c={...o};delete c.u;return st(c)};
+const resig=()=>{sigs={};D.c.forEach(c=>sigs['c_'+c.id]=sig(c));D.jobs.forEach(j=>sigs['j_'+j.id]=sig(j))};
+const stamp=()=>{const t=Date.now();D.c.forEach(c=>{const k='c_'+c.id,s=sig(c);if(sigs[k]!==s){c.u=t;sigs[k]=s}});D.jobs.forEach(j=>{const k='j_'+j.id,s=sig(j);if(sigs[k]!==s){j.u=t;sigs[k]=s}})};
+function setSync(t){SYNC=t;const e=$('#sync');if(e)e.textContent=t}
+const save=()=>{stamp();try{localStorage.setItem('wcm2',JSON.stringify(D))}catch(e){}dirty=1;lastLocal=Date.now();clearTimeout(tm);tm=setTimeout(push,300)};
+async function push(){if(!DB)return;dirty=0;pushing=1;const m=flat(),col=DB.collection('data/users/'+UID);setSync('Saving…');
+ try{for(const k in m)if(last[k]!==m[k]){await col.doc(k).set(JSON.parse(m[k]));last[k]=m[k]}
+ for(const k in last)if(!(k in m)){await col.doc(k).delete();delete last[k]}setSync('☁ Synced')}catch(e){setSync('Sync error: '+((e&&(e.code||e.message))||''))}pushing=0;lastLocal=Date.now()}
+async function initDb(){try{const u=await claude.use('user'),db=await claude.use('db');if(!db||!u)return;UID=await u.id();if(!UID)return;DB=db;setSync('Syncing…');
+ DB.collection('data/users/'+UID).onSnapshot(s=>{if(s.metadata.hasPendingWrites||dirty||pushing||Date.now()-lastLocal<3000)return;
+  const m={},R={};s.docs.forEach(d=>{const v=d.data();if(!v)return;m[d.id]=st(v);R[d.id]=v});
+  if(s.empty&&!seen){seen=1;last={};push();return}seen=1;
+  if(st(flat())===st(m)){last=m;setSync('☁ Synced');return}
+  const L={};D.c.forEach(x=>L['c_'+x.id]=x);D.jobs.forEach(x=>L['j_'+x.id]=x);const nc=[],nj=[],put=(k,v)=>(k[0]==='c'?nc:nj).push(v);
+  for(const k in R){const l=L[k],r=R[k];if(!l){if(!(k in last))put(k,r);continue}put(k,(l.u||0)>=(r.u||0)?l:r)}
+  for(const k in L)if(!(k in R)&&!(k in last))put(k,L[k]);
+  D={c:nc,jobs:nj};last=m;resig();try{localStorage.setItem('wcm2',JSON.stringify(D))}catch(e){}
+  if(st(flat())!==st(m)){clearTimeout(tm);tm=setTimeout(push,300)}else setSync('☁ Synced');
+  if(!S.sheet||S.sheet.t==='det')render()},e=>setSync('Sync error'))}catch(e){}}
+const S={tab:'today',q:'',f:'all',view:'month',cur:new Date(),sel:today(),sheet:null,draft:null};
+const cust=id=>D.c.find(c=>c.id===id);
+const pend=c=>D.jobs.find(j=>j.cid===c.id&&j.status==='Pending');
+const price=(c,sel)=>(+c.base||0)+c.addons.reduce((s,a,i)=>s+(sel[i]?+a.p||0:0),0);
+function stat(c){const j=pend(c);if(!j)return{k:'none',t:'No job'};const d=diff(j.date,today());
+ if(d<0)return{k:'over',t:'Overdue '+(-d)+'d'};if(d===0)return{k:'today',t:'Due today'};return{k:'up',t:'Due '+fmtD(j.date)}}
+function ensureJob(c){let j=pend(c);if(!j)D.jobs.push({id:uid(),cid:c.id,date:c.nextDue,status:'Pending',done:'',amount:0,paid:false});else j.date=c.nextDue}
+const ini=n=>n.split(/\s+/).map(w=>w[0]).slice(0,2).join('').toUpperCase();
+const thumb=c=>c.photo?`<img class="thumb" src="${c.photo}" alt="">`:`<div class="thumb">${esc(ini(c.name))}</div>`;
+
+/* ---------- Map ---------- */
+function mapSvg(stops){
+ if(!stops.length)return'<div class="sm" style="padding:20px;text-align:center">No stops with coordinates.</div>';
+ const W=340,H=200,pad=26;const la=stops.map(s=>s.lat),ln=stops.map(s=>s.lng);
+ const a=Math.min(...la),b=Math.max(...la),c=Math.min(...ln),d=Math.max(...ln);
+ const X=v=>d===c?W/2:pad+(v-c)/(d-c)*(W-2*pad),Y=v=>b===a?H/2:H-pad-(v-a)/(b-a)*(H-2*pad);
+ let g='';for(let i=1;i<6;i++)g+=`<line x1="${i*W/6}" y1="0" x2="${i*W/6}" y2="${H}" stroke="var(--ln)"/>`+(i<4?`<line x1="0" y1="${i*H/4}" x2="${W}" y2="${i*H/4}" stroke="var(--ln)"/>`:'');
+ const pts=stops.map(s=>X(s.lng)+','+Y(s.lat)).join(' ');
+ return`<svg viewBox="0 0 ${W} ${H}" width="100%" style="background:var(--up);border-radius:12px">${g}<polyline points="${pts}" fill="none" stroke="var(--sec)" stroke-width="2" stroke-dasharray="5 4"/>`+
+ stops.map((s,i)=>`<g><circle cx="${X(s.lng)}" cy="${Y(s.lat)}" r="12" fill="var(--pri)"/><text x="${X(s.lng)}" y="${Y(s.lat)+4}" text-anchor="middle" font-size="12" font-weight="700" fill="#fff">${i+1}</text><text x="${X(s.lng)}" y="${Y(s.lat)+26}" text-anchor="middle" font-size="10" fill="var(--tx)">${esc(s.name.slice(0,16))}</text></g>`).join('')+'</svg>'}
+function optimize(list){const r=[],l=list.filter(x=>x.lat!=null&&x.lng!=null&&x.lat!==''&&x.lng!=='').map(x=>({...x,lat:+x.lat,lng:+x.lng}));if(!l.length)return r;
+ r.push(l.shift());while(l.length){const q=r[r.length-1];let bi=0,bd=1e9;l.forEach((x,i)=>{const dd=(x.lat-q.lat)**2+(x.lng-q.lng)**2;if(dd<bd){bd=dd;bi=i}});r.push(l.splice(bi,1)[0])}return r}
+
+/* ---------- Screens ---------- */
+function render(){
+ const t=S.tab;let h='';
+ if(t==='cust'){h=`<h1>Customers</h1><div class="sub">${D.c.length} clients · ${D.c.filter(c=>stat(c).k==='over').length} overdue · <span id="sync">${SYNC}</span></div>
+ <input id="q" placeholder="Search name or address" value="${esc(S.q)}" style="margin-top:10px"><div class="chips">${[['all','All'],['over','Overdue'],['today','Today'],['up','Upcoming']].map(([k,l])=>`<span class="chip ${S.f===k?'on':''}" data-a="flt" data-k="${k}">${l}</span>`).join('')}</div><div id="list"></div>`}
+ else if(t==='today')h=todayView();else if(t==='cal')h=calView();
+ else h=revView();
+ $('#app').innerHTML=h+(t==='cust'?'<button class="fab" data-a="new" aria-label="Add customer">+</button>':'')+
+ `<nav><div>${[['today','Today','M5 13l4 4L19 7'],['cust','Customers','M3 6h18M3 12h18M3 18h12'],['cal','Schedule','M4 5h16v15H4zM4 10h16M9 3v4M15 3v4'],['rev','Revenue','M4 20V10M10 20V4M16 20v-8M22 20H2']].map(([k,l,d])=>`<button data-a="tab" data-k="${k}" class="${t===k?'on':''}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="${d}"/></svg>${l}</button>`).join('')}</div></nav>`;
+ if(t==='cust'){renderList();$('#q').oninput=e=>{S.q=e.target.value;renderList()}}
+ renderSheet()}
+function renderList(){
+ const q=S.q.toLowerCase();const L=D.c.filter(c=>(c.name+c.address).toLowerCase().includes(q)&&(S.f==='all'||stat(c).k===S.f))
+ .sort((a,b)=>(pend(a)?.date||'9')<(pend(b)?.date||'9')?-1:1);
+ $('#list').innerHTML=L.length?L.map(c=>{const s=stat(c);return`<div class="card row" data-a="det" data-id="${c.id}">${thumb(c)}<div class="sp"><div class="b">${esc(c.name)}</div><div class="sm">${esc(c.address)} · ${money(price(c,c.addons.map(a=>a.on)))}/${c.freq==='custom'?c.interval+'d':c.freq==='weekly'?'wk':'mo'}</div></div><span class="badge ${s.k}">${s.t}</span></div>`}).join(''):'<div class="card sm" style="text-align:center">No customers yet. Tap + to add your first one.</div>'}
+
+function todayView(){
+ const t=today(),todo=D.jobs.filter(j=>j.status==='Pending'&&j.date<=t&&cust(j.cid)).sort((a,b)=>a.date<b.date?-1:1);
+ const done=D.jobs.filter(j=>j.status==='Completed'&&j.done===t&&cust(j.cid));
+ const addrs=todo.map(j=>cust(j.cid).address).filter(Boolean),earned=done.reduce((s,j)=>s+j.amount,0);
+ const card=j=>{const c=cust(j.cid),d=diff(j.date,t);return`<div class="card"><div class="row" data-a="det" data-id="${c.id}">${thumb(c)}<div class="sp"><div class="b">${esc(c.name)}</div><div class="sm">${esc(c.address)}</div></div><span class="badge ${d<0?'over':'today'}">${d<0?'Overdue '+(-d)+'d':'Today'}</span></div><div class="row" style="margin-top:10px"><span class="sm sp">${money(price(c,c.addons.map(a=>a.on)))} · ${esc(c.addons.filter(a=>a.on).map(a=>a.n).join(', ')||'Base clean')}</span><button class="s" data-a="done" data-id="${j.id}">Complete</button></div></div>`};
+ return`<h1>Today</h1><div class="sub">${new Date().toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})}</div>
+ <div class="card row"><div class="stat"><div class="n">${todo.length}</div><div class="sm">To do</div></div><div class="stat"><div class="n">${done.length}</div><div class="sm">Done</div></div><div class="stat"><div class="n" style="color:var(--ok)">${money(earned)}</div><div class="sm">Earned</div></div></div>
+ <h2>To do</h2>${todo.length?todo.map(card).join('')+(addrs.length?`<a class="lnk" href="${dirUrl(addrs)}" target="_blank" rel="noopener">🗺️ Open today’s route in Google Maps</a>`:''):'<div class="card sm" style="text-align:center">All done for today 🎉</div>'}
+ ${done.length?'<h2>Completed today</h2>'+done.map(j=>{const c=cust(j.cid),n=pend(c);return`<div class="card row"><div class="sp"><div class="b">✓ ${esc(c.name)}</div><div class="sm">${money(j.amount)} · next visit ${n?fmtD(n.date):'—'}</div></div><button class="s ${j.paid?'g':''}" data-a="pay" data-id="${j.id}">${j.paid?'Paid ✓':'Mark paid'}</button></div>`}).join(''):''}`}
+function jobsOn(d){return D.jobs.filter(j=>(j.status==='Pending'?j.date:j.done)===d)}
+function calView(){
+ const cur=S.cur,y=cur.getFullYear(),m=cur.getMonth();let days=[];
+ if(S.view==='month'){const f=new Date(y,m,1),st=new Date(y,m,1-f.getDay());for(let i=0;i<42;i++){const d=new Date(st);d.setDate(st.getDate()+i);days.push(d)}}
+ else{const st=new Date(cur);st.setDate(cur.getDate()-cur.getDay());for(let i=0;i<7;i++){const d=new Date(st);d.setDate(st.getDate()+i);days.push(d)}}
+ const title=S.view==='month'?cur.toLocaleDateString(undefined,{month:'long',year:'numeric'}):'Week of '+fmtD(iso(days[0]));
+ const grid=days.map(d=>{const k=iso(d),js=jobsOn(k);return`<div class="day ${S.view==='month'&&d.getMonth()!==m?'o':''} ${k===S.sel?'sel':''} ${k===today()?'t':''}" data-a="day" data-k="${k}">${d.getDate()}<div class="dots">${js.slice(0,4).map(j=>`<i class="dot ${j.status==='Completed'?'k':diff(j.date,today())<0?'r':''}"></i>`).join('')}</div></div>`}).join('');
+ const js=jobsOn(S.sel),stops=js.filter(j=>j.status==='Pending').map(j=>cust(j.cid)).filter(c=>c&&c.address);
+ return`<h1>Schedule</h1><div class="row" style="margin:8px 0"><button class="g s" data-a="nav" data-k="-1">‹</button><div class="sp b" style="text-align:center">${title}</div><button class="g s" data-a="nav" data-k="1">›</button></div>
+ <div class="chips"><span class="chip ${S.view==='month'?'on':''}" data-a="vw" data-k="month">Month</span><span class="chip ${S.view==='week'?'on':''}" data-a="vw" data-k="week">Week</span></div>
+ <div class="cal">${'SMTWTFS'.split('').map(x=>`<div class="h">${x}</div>`).join('')}${grid}</div>
+ <h2>${parse(S.sel).toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'})}</h2>
+ ${js.length?js.map(j=>{const c=cust(j.cid);if(!c)return'';return`<div class="card row" data-a="det" data-id="${c.id}">${thumb(c)}<div class="sp"><div class="b">${esc(c.name)}</div><div class="sm">${esc(c.address)}</div></div>${j.status==='Pending'?`<button class="s" data-a="done" data-id="${j.id}">Complete</button>`:`<span class="badge ${j.paid?'paid':'unpaid'}">${j.paid?'Paid':'Unpaid'}</span>`}</div>`}).join(''):'<div class="card sm">No jobs this day.</div>'}
+ <h2>Route</h2><div class="card">${stops.length?stops.map((c,i)=>`<div class="row" style="margin:4px 0"><span class="badge">${i+1}</span><a class="sp" href="${mapUrl(c.address)}" target="_blank" rel="noopener" style="color:var(--tx);text-decoration:none">${esc(c.name)}<div class="sm">${esc(c.address)}</div></a></div>`).join('')+`<a class="lnk" href="${dirUrl(stops.map(c=>c.address))}" target="_blank" rel="noopener">🗺️ Open route in Google Maps</a>`:'<div class="sm">No pending stops with an address this day.</div>'}</div>`}
+
+function revView(){
+ const done=D.jobs.filter(j=>j.status==='Completed').sort((a,b)=>a.done<b.done?1:-1);
+ const paid=done.filter(j=>j.paid).reduce((s,j)=>s+j.amount,0),un=done.filter(j=>!j.paid).reduce((s,j)=>s+j.amount,0);
+ const mo=today().slice(0,7),mp=done.filter(j=>j.paid&&j.done.startsWith(mo)).reduce((s,j)=>s+j.amount,0);
+ return`<h1>Revenue</h1><div class="card row"><div class="stat"><div class="n" style="color:var(--ok)">${money(paid)}</div><div class="sm">Collected</div></div><div class="stat"><div class="n" style="color:var(--bad)">${money(un)}</div><div class="sm">Outstanding</div></div><div class="stat"><div class="n">${money(mp)}</div><div class="sm">This month</div></div></div>
+ <h2>Completed jobs</h2>${done.length?done.map(j=>{const c=cust(j.cid);return`<div class="card row"><div class="sp"><div class="b">${esc(c?c.name:'Deleted')}</div><div class="sm">${fmtD(j.done)} · ${money(j.amount)}</div></div><button class="s ${j.paid?'g':''}" data-a="pay" data-id="${j.id}">${j.paid?'Paid ✓':'Mark paid'}</button></div>`}).join(''):'<div class="card sm">Nothing completed yet.</div>'}`}
+
+/* ---------- Sheets ---------- */
+function renderSheet(){
+ const s=S.sheet;if(!s){$('#ovl').innerHTML='';return}let h='';
+ if(s.t==='det'){const c=cust(s.id);if(!c){S.sheet=null;return renderSheet()}const j=pend(c),hist=D.jobs.filter(x=>x.cid===c.id&&x.status==='Completed').sort((a,b)=>a.done<b.done?1:-1);
+  h=`<div class="row">${thumb(c)}<div class="sp"><div class="b" style="font-size:18px">${esc(c.name)}</div><div class="sm"><a href="${mapUrl(c.address)}" target="_blank" rel="noopener" style="color:var(--pri)">📍 ${esc(c.address)}</a>${c.phone?' · <a href="tel:'+esc(c.phone)+'" style="color:var(--pri)">'+esc(c.phone)+'</a>':''}</div></div><button class="g s" data-a="x">Close</button></div>
+  ${c.photo?`<img src="${c.photo}" alt="Property" style="width:100%;border-radius:12px;margin-top:10px;max-height:180px;object-fit:cover">`:''}
+  ${c.address?`<div class="card"><div class="b">Location</div>${embed(c.address)}<a class="lnk" href="${mapUrl(c.address)}" target="_blank" rel="noopener">Open in Google Maps</a></div>`:''}<div class="card"><div class="row"><span class="b sp">Service package</span><span class="badge ${stat(c).k}">${stat(c).t}</span></div>
+  <div class="sm" style="margin:4px 0 8px">${c.freq==='custom'?'Every '+c.interval+' days':c.freq[0].toUpperCase()+c.freq.slice(1)} · next ${j?fmtD(j.date):'—'}</div>
+  <div class="row"><span class="sp">Base price</span><b>${money(c.base)}</b></div>
+  ${c.addons.map(a=>`<div class="row sm"><span class="sp">${a.on?'✓':'○'} ${esc(a.n)}</span><span>${money(a.p)}</span></div>`).join('')}
+  <div class="row" style="border-top:1px solid var(--ln);margin-top:8px;padding-top:8px"><span class="sp b">Standard visit</span><b>${money(price(c,c.addons.map(a=>a.on)))}</b></div></div>
+  <div class="row">${j?`<button class="sp" data-a="done" data-id="${j.id}">Complete job</button>`:''}<button class="g sp" data-a="edit" data-id="${c.id}">Edit</button></div>
+  <h2>History</h2>${hist.length?hist.map(x=>`<div class="card row"><div class="sp"><div class="b">${money(x.amount)}</div><div class="sm">${fmtD(x.done)}</div></div><button class="s ${x.paid?'g':''}" data-a="pay" data-id="${x.id}">${x.paid?'Paid ✓':'Mark paid'}</button></div>`).join(''):'<div class="sm">No completed jobs yet.</div>'}`}
+ else if(s.t==='edit'){const d=S.draft;
+  h=`<div class="row"><h2 class="sp" style="margin:0">${s.id?'Edit':'New'} customer</h2><button class="g s" data-a="x">Cancel</button></div>
+  <label>Name</label><input id="f_name" value="${esc(d.name)}"><label>Address (street, town, postcode)</label><input id="f_address" placeholder="e.g. 12 High Street, Leeds LS1 1AA" value="${esc(d.address)}"><label>Phone</label><input id="f_phone" type="tel" value="${esc(d.phone)}">
+  <div class="row" style="gap:8px"><button class="g s" data-a="pv" style="margin-top:8px">📍 View location on map</button><a id="f_map" class="lnk" target="_blank" rel="noopener" href="${mapUrl(d.address)}">Open in Google Maps</a></div>${d.showMap&&d.address?embed(d.address):''}
+  <label>Property reference photo</label><div class="row">${d.photo?`<img class="thumb" src="${d.photo}" alt="">`:''}<input id="f_photo" type="file" accept="image/*"></div>
+  <div class="row"><div class="sp"><label>Frequency</label><select id="f_freq">${['weekly','monthly','custom'].map(o=>`<option ${d.freq===o?'selected':''}>${o}</option>`).join('')}</select></div><div class="sp"><label>Custom days</label><input id="f_int" type="number" min="1" value="${esc(d.interval)}"></div></div>
+  <div class="row"><div class="sp"><label>Base price (£)</label><input id="f_base" type="number" step="any" value="${esc(d.base)}"></div><div class="sp"><label>Next due</label><input id="f_due" type="date" value="${esc(d.nextDue)}"></div></div>
+  <label>Add-ons (checked = included every visit)</label>
+  ${d.addons.map((a,i)=>`<div class="row" style="margin-bottom:6px"><input type="checkbox" class="a_on" ${a.on?'checked':''} style="width:20px"><input class="a_n" placeholder="Gutter, doors, roof…" value="${esc(a.n)}"><input class="a_p" type="number" step="any" placeholder="£" value="${esc(a.p)}" style="width:90px"><button class="d s" data-a="rma" data-k="${i}">✕</button></div>`).join('')}
+  <button class="g s" data-a="adda">+ Add-on</button>
+  <div class="row" style="margin-top:16px"><button class="sp" data-a="save">Save customer</button>${s.id?`<button class="d" data-a="del">${S.armDel?'Tap again to delete':'Delete'}</button>`:''}</div>`}
+ else if(s.t==='done'){const j=D.jobs.find(x=>x.id===s.id),c=j&&cust(j.cid);if(!c){S.sheet=null;return renderSheet()}
+  h=`<div class="row"><h2 class="sp" style="margin:0">Complete: ${esc(c.name)}</h2><button class="g s" data-a="x">Cancel</button></div>
+  <label>Services performed</label><div class="card"><div class="row"><span class="sp">Base</span><b>${money(c.base)}</b></div>${c.addons.map((a,i)=>`<label class="row" style="margin:6px 0;color:var(--tx);font-size:15px"><input type="checkbox" class="d_on" data-i="${i}" ${a.on?'checked':''} style="width:20px"><span class="sp">${esc(a.n)}</span><span>${money(a.p)}</span></label>`).join('')}</div>
+  <label>Final invoice amount (£) — adjustable</label><input id="d_amt" type="number" step="any" value="${price(c,c.addons.map(a=>a.on))}">
+  <label>Completion date</label><input id="d_date" type="date" value="${today()}">
+  <label class="row" style="color:var(--tx);font-size:15px;margin-top:12px"><input type="checkbox" id="d_paid" style="width:20px"><span>Payment received</span></label>
+  <div class="sm" style="margin:10px 0" id="d_next"></div><button style="width:100%" data-a="fin" data-id="${j.id}">Mark complete</button>`}
+ $('#ovl').innerHTML=`<div class="ov" data-a="x"><div class="sheet" data-stop="1">${h}</div></div>`;
+ if(s.t==='done'){upNext();document.querySelectorAll('.d_on').forEach(e=>e.onchange=()=>{const c=cust(D.jobs.find(x=>x.id===s.id).cid);const sel=c.addons.map((_,i)=>document.querySelector('.d_on[data-i="'+i+'"]').checked);$('#d_amt').value=price(c,sel)});$('#d_date').onchange=upNext}
+ if(s.t==='edit'){$('#f_address').oninput=e=>{$('#f_map').href=mapUrl(e.target.value)};$('#f_photo').onchange=e=>{const f=e.target.files[0];if(!f)return;collect();const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,480/im.width),cv=document.createElement('canvas');cv.width=im.width*k;cv.height=im.height*k;cv.getContext('2d').drawImage(im,0,0,cv.width,cv.height);S.draft.photo=cv.toDataURL('image/jpeg',.6);renderSheet()};im.src=r.result};r.readAsDataURL(f)}}}
+function upNext(){const j=D.jobs.find(x=>x.id===S.sheet.id),c=cust(j.cid),e=$('#d_next'),d=$('#d_date').value||today();if(e)e.textContent='Next visit will be scheduled for '+fmtD(addInt(d,c))+'.'}
+function collect(){const d=S.draft,g=i=>$('#'+i).value;d.name=g('f_name');d.address=g('f_address');d.phone=g('f_phone');d.freq=g('f_freq');d.interval=g('f_int');d.base=g('f_base');d.nextDue=g('f_due');
+ const on=[...document.querySelectorAll('.a_on')],n=[...document.querySelectorAll('.a_n')],p=[...document.querySelectorAll('.a_p')];d.addons=n.map((x,i)=>({n:x.value,p:p[i].value,on:on[i].checked?1:0}))}
+
+/* ---------- Actions ---------- */
+document.addEventListener('click',e=>{
+ const el=e.target.closest('[data-a]');if(!el)return;
+ if(el.classList.contains('ov')&&e.target.closest('[data-stop]'))return;
+ const a=el.dataset.a,id=el.dataset.id,k=el.dataset.k;
+ if(a==='x'){if(el.classList.contains('ov')&&e.target!==el)return;S.sheet=null;S.draft=null}
+ else if(a==='tab')S.tab=k;else if(a==='flt')S.f=k;else if(a==='vw')S.view=k;
+ else if(a==='day')S.sel=k;
+ else if(a==='nav'){const c=S.cur;if(S.view==='month')c.setMonth(c.getMonth()+ +k,1);else c.setDate(c.getDate()+7*k)}
+ else if(a==='det')S.sheet={t:'det',id};
+ else if(a==='done')S.sheet={t:'done',id};
+ else if(a==='new'){S.draft={name:'',address:'',phone:'',photo:'',freq:'monthly',interval:14,base:100,addons:[{n:'Gutters',p:40,on:0}],nextDue:ADD(7)};S.sheet={t:'edit'}}
+ else if(a==='edit'){S.draft=JSON.parse(JSON.stringify(cust(id)));const j=pend(cust(id));if(j)S.draft.nextDue=j.date;S.sheet={t:'edit',id}}
+ else if(a==='pv'){collect();S.draft.showMap=true}
+ else if(a==='adda'){collect();S.draft.addons.push({n:'',p:'',on:0})}
+ else if(a==='rma'){collect();S.draft.addons.splice(+k,1)}
+ else if(a==='save'){collect();const d=S.draft;if(!d.name.trim()){const f=$('#f_name');f.focus();f.style.borderColor='var(--bad)';f.placeholder='Name is required';return}
+  const o={...d,showMap:undefined,name:d.name.trim(),base:+d.base||0,interval:+d.interval||14,nextDue:d.nextDue||ADD(7),addons:d.addons.filter(x=>x.n.trim()).map(x=>({n:x.n.trim(),p:+x.p||0,on:x.on?1:0}))};
+  if(S.sheet.id){Object.assign(cust(S.sheet.id),o)}else{o.id=uid();D.c.push(o)}
+  ensureJob(S.sheet.id?cust(S.sheet.id):o);save();S.sheet=null;S.draft=null}
+ else if(a==='del'){if(!S.armDel){collect();S.armDel=true;setTimeout(()=>{S.armDel=false;if(S.sheet&&S.sheet.t==='edit'){collect();render()}},4000)}else{S.armDel=false;D.jobs=D.jobs.filter(j=>j.cid!==S.sheet.id);D.c=D.c.filter(c=>c.id!==S.sheet.id);save();S.sheet=null;S.draft=null}}
+ else if(a==='fin'){const j=D.jobs.find(x=>x.id===id),c=cust(j.cid),dt=$('#d_date').value||today();
+  j.status='Completed';j.done=dt;j.amount=+$('#d_amt').value||0;j.paid=$('#d_paid').checked;
+  c.nextDue=addInt(dt,c);D.jobs.push({id:uid(),cid:c.id,date:c.nextDue,status:'Pending',done:'',amount:0,paid:false});save();S.sheet=null}
+ else if(a==='pay'){const j=D.jobs.find(x=>x.id===id);j.paid=!j.paid;save()}
+ render()});
+for(let i=0;i<16;i++){const b=document.createElement('span'),s=14+Math.random()*52;b.className='bub';b.style.cssText=`width:${s}px;height:${s}px;left:${Math.random()*100}%;--dx:${(Math.random()*80-40)|0}px;--t:${(Math.random()*90)|0}%;animation-duration:${14+Math.random()*18}s;animation-delay:-${Math.random()*20}s`;document.body.appendChild(b)}
+resig();render();initDb();
+</script></body></html>
